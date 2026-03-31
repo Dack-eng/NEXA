@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String        @id
+  name            String
+  email           String        @unique
+  role            String
+  status          String
+  bio             String
+  passwordHash    String
+  passwordSalt    String
+  createdAt       DateTime
+  channels        Channel[]     @relation("ChannelOwner")
+  sessions        Session[]
+  donations       Donation[]
+  reports         Report[]      @relation("Reporter")
+  resolvedReports Report[]      @relation("Resolver")
+  bans            Ban[]         @relation("BannedUser")
+  createdBans     Ban[]         @relation("BanCreator")
+  auditLogs       AuditLog[]    @relation("AuditActor")
+  chatMessages    ChatMessage[]
+}
+
+model Session {
+  id         String   @id
+  userId     String
+  createdAt  DateTime
+  expiresAt  DateTime
+  lastSeenAt DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Channel {
+  id           String        @id
+  slug         String        @unique
+  name         String
+  handle       String
+  ownerUserId  String
+  title        String
+  category     String
+  description  String
+  accent       String
+  surface      String
+  isLive       Boolean
+  viewers      Int
+  followers    Int
+  tags         String[]
+  startedAt    DateTime?
+  stream       Json
+  moderation   Json
+  owner        User          @relation("ChannelOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  donations    Donation[]
+  reports      Report[]
+  chatMessages ChatMessage[]
+
+  @@index([ownerUserId])
+}
+
+model Donation {
+  id               String    @id
+  channelId        String
+  userId           String?
+  supporterName    String
+  amount           Float
+  currency         String
+  message          String
+  status           String
+  paymentProvider  String
+  paymentSessionId String
+  checkoutUrl      String
+  providerReceipt  Json?
+  createdAt        DateTime
+  paidAt           DateTime?
+  channel          Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([channelId])
+  @@index([userId])
+  @@index([paymentSessionId])
+}
+
+model Report {
+  id             String    @id
+  channelId      String
+  reporterUserId String
+  reason         String
+  detail         String
+  status         String
+  createdAt      DateTime
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  actionNotes    String
+  channel        Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  reporter       User      @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  resolver       User?     @relation("Resolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([channelId])
+  @@index([reporterUserId])
+  @@index([resolvedBy])
+}
+
+model Ban {
+  id        String    @id
+  userId    String
+  reason    String
+  scope     String
+  active    Boolean
+  createdAt DateTime
+  expiresAt DateTime?
+  createdBy String
+  user      User      @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  creator   User      @relation("BanCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdBy])
+}
+
+model AuditLog {
+  id          String   @id
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String
+  detail      String
+  createdAt   DateTime
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+}
+
+model ChatMessage {
+  id        String    @id
+  channelId String
+  userId    String
+  body      String
+  status    String
+  createdAt DateTime
+  deletedAt DateTime?
+  metadata  Json?
+  channel   Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([userId])
+}
