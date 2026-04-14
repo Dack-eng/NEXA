@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "NEXA production streaming starter with auth, payments, live setup, moderation, Prisma, and chat.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
