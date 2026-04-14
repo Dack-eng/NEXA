@@ -36,7 +36,7 @@ function buildSeedUsers() {
       email: 'admin@nexa.local',
       password: 'Admin123!',
       role: 'admin',
-      bio: 'Platform operations and policy oversight.'
+      bio: 'Платформын үйл ажиллагаа болон бодлогын хяналт.'
     }),
     buildSeedUser({
       id: SEED_USER_IDS.creator,
@@ -44,7 +44,7 @@ function buildSeedUsers() {
       email: 'creator@nexa.local',
       password: 'Creator123!',
       role: 'creator',
-      bio: 'Primary seeded creator account for the demo channels.'
+      bio: 'Туршилтын сувгуудын гол бүтээгчийн бүртгэл.'
     }),
     buildSeedUser({
       id: SEED_USER_IDS.moderator,
@@ -52,7 +52,7 @@ function buildSeedUsers() {
       email: 'moderator@nexa.local',
       password: 'Moderator123!',
       role: 'moderator',
-      bio: 'Seeded moderation account for reviewing reports.'
+      bio: 'Мэдүүлэг шалгах туршилтын модерацийн бүртгэл.'
     }),
     buildSeedUser({
       id: SEED_USER_IDS.viewer,
@@ -60,7 +60,7 @@ function buildSeedUsers() {
       email: 'viewer@nexa.local',
       password: 'Viewer123!',
       role: 'viewer',
-      bio: 'Seeded viewer account for checkout and reporting flows.'
+      bio: 'Checkout болон мэдүүлгийн туршилтын үзэгчийн бүртгэл.'
     })
   ];
 }
@@ -126,10 +126,10 @@ function buildDefaultStore() {
         slug: 'nexa-arena',
         name: 'NEXA Arena',
         handle: '@nexaarena',
-        title: 'Road to top rank with the NEXA crew',
+        title: 'NEXA багтайгаа дээд зэрэглэл рүү!',
         category: 'Gaming',
         description:
-          'Competitive gameplay, community scrims, and live breakdowns built for an always-on audience.',
+          'Өрсөлдөөнт тоглоом, нийгэмлэгийн scrims, шууд шинжилгээ — үргэлж идэвхтэй үзэгчдэд зориулсан.',
         accent: '#3ce0d1',
         surface: '#14203a',
         isLive: true,
@@ -142,10 +142,10 @@ function buildDefaultStore() {
         slug: 'nexa-music',
         name: 'NEXA Pulse',
         handle: '@nexapulse',
-        title: 'Late-night live set and shoutout requests',
+        title: 'Шөнийн шууд тоглолт болон shoutout хүсэлтүүд',
         category: 'Music',
         description:
-          'A creator-focused room for live performances, fan requests, and premium donation shoutouts.',
+          'Шууд тоглолт, фэны хүсэлт, хандивын shoutout — бүтээгчдэд зориулсан хөгжмийн өрөө.',
         accent: '#ff7b6b',
         surface: '#301d2d',
         isLive: true,
@@ -158,16 +158,136 @@ function buildDefaultStore() {
         slug: 'nexa-talk',
         name: 'NEXA Sessions',
         handle: '@nexasessions',
-        title: 'Founder stories, audience call-ins, and creator Q&A',
+        title: 'Үүсгэн байгуулагчийн түүх, үзэгчдийн дуудлага, Q&A',
         category: 'Talk',
         description:
-          'A conversation-first format for interviews, community questions, and premium memberships.',
+          'Ярилцлага, нийгэмлэгийн асуулт, premium гишүүнчлэл — яриа голлосон формат.',
         accent: '#ffd166',
         surface: '#322c12',
         isLive: false,
         viewers: 0,
         followers: 6400,
         tags: ['Podcast', 'Q&A', 'Business']
+      }),
+      buildChannel({
+        id: 'nexa-irl',
+        slug: 'nexa-irl',
+        name: 'Temujin Live',
+        handle: '@temujinlive',
+        title: 'Хотоор явж байна — нэгдээрэй!',
+        category: 'IRL',
+        description: 'Гадаа болон аялалын бодит амьдрал. Аяллыг дагаж, бодол санаагаа шууд хуваалцаарай.',
+        accent: '#a78bfa',
+        surface: '#1a1030',
+        isLive: true,
+        viewers: 2891,
+        followers: 31200,
+        tags: ['IRL', 'Travel', 'Outdoors']
+      }),
+      buildChannel({
+        id: 'nexa-code',
+        slug: 'nexa-code',
+        name: 'CodeWithSaraa',
+        handle: '@codewithsaraa',
+        title: 'Full-stack апп эхнээс нь шууд бүтээж байна',
+        category: 'Software & Technology',
+        description: 'Шууд кодинг — веб хөгжүүлэлт, системийн дизайн, нээлттэй эх кодын хувь нэмэр.',
+        accent: '#38bdf8',
+        surface: '#0d1f2d',
+        isLive: true,
+        viewers: 943,
+        followers: 14700,
+        tags: ['Coding', 'Web Dev', 'Open Source']
+      }),
+      buildChannel({
+        id: 'nexa-sports',
+        slug: 'nexa-sports',
+        name: 'StrikerFC',
+        handle: '@strikerfc',
+        title: 'Чемпионуудын лигийн watchalong + шууд сэтгэгдэл',
+        category: 'Sports',
+        description: 'Шилдэг спортын watchalong, fantasy шинжилгээ, бодит фэнд зориулсан шууд тоглолтын хариу үйлдэл.',
+        accent: '#f97316',
+        surface: '#1f1208',
+        isLive: true,
+        viewers: 5120,
+        followers: 47800,
+        tags: ['Football', 'Watchalong', 'Fantasy']
+      }),
+      buildChannel({
+        id: 'nexa-art',
+        slug: 'nexa-art',
+        name: 'InkByMunko',
+        handle: '@inkbymunko',
+        title: 'Дижитал зураг — дүрийн дизайн #44 дугаар хичээл',
+        category: 'Art',
+        description: 'Бүтээлч процессийг эхнээс нь эцэс хүртэл харааарай. Чатлаж, санал өгч, захиалга хийгээрэй.',
+        accent: '#f472b6',
+        surface: '#210d1c',
+        isLive: false,
+        viewers: 0,
+        followers: 8350,
+        tags: ['Digital Art', 'Character Design', 'Commission']
+      }),
+      buildChannel({
+        id: 'nexa-asmr',
+        slug: 'nexa-asmr',
+        name: 'Serene ASMR',
+        handle: '@sereneaSmr',
+        title: 'Бороо + зөөлөн дарц — шөнийн тайвшрал',
+        category: 'ASMR',
+        description: 'Платформын хамгийн тайван өнцөг. Дарц, шивнэлт, ambient дуу — гүн анхаарал, унтах зориулалттай.',
+        accent: '#67e8f9',
+        surface: '#071e24',
+        isLive: true,
+        viewers: 421,
+        followers: 5900,
+        tags: ['ASMR', 'Relaxing', 'Sleep']
+      }),
+      buildChannel({
+        id: 'nexa-fitness',
+        slug: 'nexa-fitness',
+        name: 'FitWithBold',
+        handle: '@fitwithbold',
+        title: 'Өглөөний HIIT — 45 мин тоног хэрэгслийгүй дасгал',
+        category: 'Fitness & Health',
+        description: 'Өдөр бүрийн шууд дасгал. Тоног хэрэгсэл шаардахгүй. Давталтаа чатаар хуваалцаж, зөвлөгөө ав.',
+        accent: '#4ade80',
+        surface: '#0a1f0d',
+        isLive: false,
+        viewers: 0,
+        followers: 12400,
+        tags: ['Fitness', 'HIIT', 'Workout']
+      }),
+      buildChannel({
+        id: 'nexa-poker',
+        slug: 'nexa-poker',
+        name: 'AllIn_Batzul',
+        handle: '@allinbatzul',
+        title: 'Том мөнгөний cash game — $5/$10 NL Holdem',
+        category: 'Gambling',
+        description: 'Шууд покерийн сэтгэгдэл, гарын шинжилгээ, нийгэмлэгийн хэлэлцүүлэг — туршлагатай тоглогчоос.',
+        accent: '#facc15',
+        surface: '#1a1500',
+        isLive: true,
+        viewers: 1837,
+        followers: 22100,
+        tags: ['Poker', 'Cash Game', 'Strategy']
+      }),
+      buildChannel({
+        id: 'nexa-cooking',
+        slug: 'nexa-cooking',
+        name: 'NomadChef',
+        handle: '@nomadchef',
+        title: 'Уламжлалт монгол буузаа шууд хийж байна — суралцаарай!',
+        category: 'Food & Drink',
+        description: 'Уламжлалт болон fusion жор шууд хоол хийж харуулна. Асуулт тавьж, зөвлөгөө аваарай.',
+        accent: '#fb923c',
+        surface: '#1f0e05',
+        isLive: false,
+        viewers: 0,
+        followers: 9600,
+        tags: ['Cooking', 'Mongolian', 'Food']
       })
     ],
     donations: [
@@ -178,7 +298,7 @@ function buildDefaultStore() {
         supporterName: 'Batz',
         amount: 25,
         currency: 'usd',
-        message: 'NEXA is looking clean already. Keep pushing.',
+        message: 'NEXA аль хэдийн сайхан харагдаж байна. Үргэлжлүүл!',
         status: 'paid',
         paymentProvider: 'legacy',
         paymentSessionId: '',
@@ -192,7 +312,7 @@ function buildDefaultStore() {
         supporterName: 'Munkh',
         amount: 15,
         currency: 'usd',
-        message: 'More ranked games please.',
+        message: 'Цааш нь ranked тоглоом тоглоорой!',
         status: 'paid',
         paymentProvider: 'legacy',
         paymentSessionId: '',
@@ -206,7 +326,7 @@ function buildDefaultStore() {
         supporterName: 'Saraa',
         amount: 40,
         currency: 'usd',
-        message: 'Play one more chill track for the night stream.',
+        message: 'Шөнийн стримд нэг л тайван дуу тоглоосой!',
         status: 'paid',
         paymentProvider: 'legacy',
         paymentSessionId: '',
@@ -220,7 +340,7 @@ function buildDefaultStore() {
         channelId: 'nexa-talk',
         reporterUserId: SEED_USER_IDS.viewer,
         reason: 'harassment',
-        detail: 'Please review the call-in queue policy and message moderation before launch.',
+        detail: 'Нээлтийн өмнө дуудлагын дарааллын бодлого болон мессежийн модерацийг шалгана уу.',
         status: 'open',
         createdAt: '2026-03-31T13:02:00.000Z',
         resolvedAt: null,
@@ -236,7 +356,7 @@ function buildDefaultStore() {
         action: 'platform.seeded',
         targetType: 'system',
         targetId: 'nexa',
-        detail: 'Initial production-ready demo data created.',
+        detail: 'Анхны үйлдвэрлэлийн түвшний туршилтын өгөгдөл үүсгэгдлээ.',
         createdAt: '2026-03-31T13:00:00.000Z'
       }
     ],
@@ -245,7 +365,7 @@ function buildDefaultStore() {
         id: 'msg-1001',
         channelId: 'nexa-arena',
         userId: SEED_USER_IDS.viewer,
-        body: 'NEXA chat is live. This is the first seeded message.',
+        body: 'NEXA чат шууд ажиллаж байна. Энэ бол анхны мессеж.',
         status: 'visible',
         createdAt: '2026-03-31T13:05:00.000Z',
         deletedAt: null,
@@ -257,7 +377,7 @@ function buildDefaultStore() {
         id: 'msg-1002',
         channelId: 'nexa-arena',
         userId: SEED_USER_IDS.creator,
-        body: 'Creator online. Use this room to test real-time audience chat.',
+        body: 'Бүтээгч онлайн байна. Шууд үзэгчдийн чатыг энэ өрөөнд туршаарай.',
         status: 'visible',
         createdAt: '2026-03-31T13:06:00.000Z',
         deletedAt: null,

@@ -79,30 +79,33 @@ function bindLogout() {
 }
 
 function channelCard(channel) {
-  const tags = (channel.tags || []).map((tag) => `<span>${escapeHtml(tag)}</span>`).join('');
-  const owner = channel.owner ? escapeHtml(channel.owner.name) : 'Unknown owner';
+  const tags = (channel.tags || []).slice(0, 3).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('');
+  const initials = escapeHtml(channel.initials || channel.name?.[0] || 'N');
+  const isLive = channel.isLive;
 
-  return `<article class="channel-card reveal" style="--card-accent:${escapeHtml(channel.accent)}; --card-surface:${escapeHtml(channel.surface)};">
-    <div class="channel-cover">
-      <div class="channel-badge ${channel.isLive ? 'is-live' : ''}">${channel.isLive ? 'Live now' : 'Offline'}</div>
-      <div class="channel-avatar">${escapeHtml(channel.initials)}</div>
-      <div class="channel-meta">
-        <strong>${escapeHtml(channel.name)}</strong>
-        <small>${escapeHtml(channel.category)}</small>
+  return `<a class="channel-card" href="/channel/${encodeURIComponent(channel.slug)}" style="--card-accent:${escapeHtml(channel.accent)};--card-surface:${escapeHtml(channel.surface)};">
+    <div class="channel-thumb">
+      <div class="channel-thumb-bg">
+        <div class="channel-thumb-avatar">${initials}</div>
+      </div>
+      <div class="channel-thumb-overlay">
+        ${isLive
+          ? `<span class="live-badge">LIVE</span><span class="viewer-chip">👁 ${formatCompact(channel.viewers)}</span>`
+          : `<span class="offline-badge">OFFLINE</span>`}
       </div>
     </div>
     <div class="channel-body">
-      <h3>${escapeHtml(channel.title)}</h3>
-      <p>${escapeHtml(channel.description)}</p>
-      <div class="tag-row">${tags}</div>
-      <div class="channel-stats">
-        <span>${formatCompact(channel.viewers)} viewers</span>
-        <span>${formatCurrency(channel.donationTotal)} paid</span>
+      <div class="channel-body-top">
+        <div class="channel-body-avatar">${initials}</div>
+        <div class="channel-body-info">
+          <div class="channel-title">${escapeHtml(channel.title)}</div>
+          <div class="channel-name">${escapeHtml(channel.name)}</div>
+        </div>
       </div>
-      <p class="micro-copy">Owner: ${owner} · Reports: ${channel.openReports}</p>
+      <span class="channel-category">${escapeHtml(channel.category)}</span>
+      <div class="tag-row">${tags}</div>
     </div>
-    <a class="button button-ghost" href="/channel/${encodeURIComponent(channel.slug)}">Open channel</a>
-  </article>`;
+  </a>`;
 }
 
 function donationRow(donation) {
@@ -111,7 +114,7 @@ function donationRow(donation) {
       <strong>${escapeHtml(donation.supporterName)}</strong>
       <span>${formatCurrency(donation.amount)}</span>
     </div>
-    <p>${escapeHtml(donation.message || 'Paid support without a note.')}</p>
+    <p>${escapeHtml(donation.message || 'Тэмдэглэлгүй дэмжлэг.')}</p>
     <small>${timeAgo(donation.paidAt || donation.createdAt)}</small>
   </article>`;
 }
@@ -126,10 +129,27 @@ function metricCard(label, value) {
 async function loadHomePage() {
   const payload = await requestJson('/api/channels');
   const featuredGrid = document.querySelector('#featuredGrid');
+  const homeViewers = document.querySelector('#homeViewers');
+  const homeLive = document.querySelector('#homeLiveChannels');
+  const homeRevenue = document.querySelector('#homeRevenue');
 
   if (featuredGrid) {
-    featuredGrid.innerHTML = payload.channels.map(channelCard).join('');
+    featuredGrid.innerHTML = payload.channels.length
+      ? payload.channels.map(channelCard).join('')
+      : '<p class="form-note" style="padding:20px">Суваг байхгүй байна.</p>';
   }
+
+  // Wire category filter buttons
+  bindCategoryFilter(payload.channels);
+
+  // Update hero stats
+  const totalViewers = payload.channels.reduce((s, c) => s + Number(c.viewers || 0), 0);
+  const liveCount    = payload.channels.filter((c) => c.isLive).length;
+  const totalRevenue = payload.channels.reduce((s, c) => s + Number(c.donationTotal || 0), 0);
+
+  if (homeViewers) homeViewers.textContent = formatCompact(totalViewers);
+  if (homeLive)    homeLive.textContent    = String(liveCount);
+  if (homeRevenue) homeRevenue.textContent = formatCurrency(totalRevenue);
 }
 
 function renderPlayerMedia(channel) {
@@ -142,78 +162,81 @@ function renderPlayerMedia(channel) {
 
   if (playbackUrl) {
     return `<div class="player-placeholder">
-      <strong>Playback endpoint configured</strong>
-      <p>Use the external playback URL or replace it with a direct media source for inline video playback.</p>
-      <a class="button button-ghost" href="${escapeHtml(playbackUrl)}" target="_blank" rel="noreferrer">Open playback URL</a>
+      <strong>Тоглуулах URL тохируулагдсан</strong>
+      <p>Гадны тоглуулах URL ашиглаарай эсвэл шууд медиа эх сурвалж нэмэрэй.</p>
+      <a class="button button-ghost" href="${escapeHtml(playbackUrl)}" target="_blank" rel="noreferrer">Тоглуулах URL нээх</a>
     </div>`;
   }
 
   if (viewerJoinUrl) {
     return `<div class="player-placeholder">
-      <strong>Viewer room ready</strong>
-      <p>The creator has configured a live room join link for an external playback client.</p>
-      <a class="button button-ghost" href="${escapeHtml(viewerJoinUrl)}" target="_blank" rel="noreferrer">Open viewer room</a>
+      <strong>Үзэгчийн өрөө бэлэн байна</strong>
+      <p>Бүтээгч үзэгчийн холболтын линк тохируулсан байна.</p>
+      <a class="button button-ghost" href="${escapeHtml(viewerJoinUrl)}" target="_blank" rel="noreferrer">Үзэгчийн өрөө нээх</a>
     </div>`;
   }
 
   return `<div class="player-placeholder">
-    <strong>Waiting for a live signal</strong>
-    <p>Set a playback URL or viewer join URL in Studio to turn this into a real watch experience.</p>
+    <strong>Шууд дамжуулалт хүлээж байна</strong>
+    <p>Студид тоглуулах URL эсвэл үзэгчийн холболтын URL нэмнэ үү.</p>
   </div>`;
 }
 
 function renderChannelPlayer(channel) {
-  return `<div class="player-shell" style="--channel-accent:${escapeHtml(channel.accent)}; --channel-surface:${escapeHtml(channel.surface)};">
-    <div class="player-stage">
-      <div class="player-art">${renderPlayerMedia(channel)}</div>
-      <div class="player-overlay">
-        <span class="live-pill ${channel.isLive ? '' : 'is-offline'}">${channel.isLive ? 'LIVE' : 'OFFLINE'}</span>
-        <strong>${escapeHtml(channel.title)}</strong>
-        <small>${escapeHtml(channel.name)} ${escapeHtml(channel.handle)}</small>
-      </div>
-    </div>
-    <div class="player-stats">
-      <div>
-        <span>Viewers</span>
-        <strong>${formatCompact(channel.viewers)}</strong>
-      </div>
-      <div>
-        <span>Followers</span>
-        <strong>${formatCompact(channel.followers)}</strong>
-      </div>
-      <div>
-        <span>Paid donations</span>
-        <strong>${formatCurrency(channel.donationTotal)}</strong>
-      </div>
-    </div>
+  const initials = channel.initials || channel.name?.[0] || 'N';
+
+  // Update surrounding elements if they exist
+  const avatarEl  = document.querySelector('#playerAvatar');
+  const titleEl   = document.querySelector('#playerTitle');
+  const nameEl    = document.querySelector('#playerChannelName');
+  const viewersEl = document.querySelector('#statViewers');
+  const followEl  = document.querySelector('#statFollowers');
+  const catEl     = document.querySelector('#statCategory');
+  const statusEl  = document.querySelector('#statStatus');
+  const tagsEl    = document.querySelector('#playerTags');
+
+  if (avatarEl)  { avatarEl.textContent = initials; avatarEl.style.color = channel.accent || 'var(--green)'; }
+  if (titleEl)   titleEl.textContent  = channel.title;
+  if (nameEl)    nameEl.textContent   = channel.handle || channel.name;
+  if (viewersEl) viewersEl.textContent = formatCompact(channel.viewers);
+  if (followEl)  followEl.textContent  = formatCompact(channel.followers);
+  if (catEl)     catEl.textContent     = channel.category;
+  if (statusEl)  statusEl.innerHTML    = channel.isLive
+    ? '<span class="live-badge">LIVE</span>'
+    : '<span class="offline-badge">OFFLINE</span>';
+  if (tagsEl) {
+    tagsEl.innerHTML = (channel.tags || []).map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+  }
+
+  // Return inner player HTML
+  return `<div style="--channel-surface:${escapeHtml(channel.surface || '#0d1f0a')}; width:100%; height:100%;">
+    <div class="player-art">${renderPlayerMedia(channel)}</div>
   </div>`;
 }
 
 function renderChannelAbout(channel) {
-  const tags = (channel.tags || []).map((tag) => `<span>${escapeHtml(tag)}</span>`).join('');
   const moderationState = channel.moderation?.state || 'approved';
   const provider = channel.stream?.provider || 'manual';
-  const owner = channel.owner?.name || 'Unknown owner';
+  const owner = channel.owner?.name || 'Эзэмшигч тодорхойгүй';
 
   return `<div class="section-head compact">
     <div>
-      <span class="eyebrow">Channel profile</span>
+      <span class="eyebrow">About</span>
       <h2>${escapeHtml(channel.name)}</h2>
     </div>
   </div>
-  <p class="channel-description">${escapeHtml(channel.description)}</p>
-  <div class="tag-row">${tags}</div>
-  <div class="info-grid">
+  <p style="color:var(--text-2);font-size:13px;line-height:1.65;margin-bottom:14px">${escapeHtml(channel.description)}</p>
+  <div class="info-grid" style="grid-template-columns:repeat(3,1fr)">
     <div>
-      <span>Owner</span>
+      <span>Эзэмшигч</span>
       <strong>${escapeHtml(owner)}</strong>
     </div>
     <div>
-      <span>Stream provider</span>
+      <span>Үйлчлэгч</span>
       <strong>${escapeHtml(provider)}</strong>
     </div>
     <div>
-      <span>Moderation state</span>
+      <span>Модерация</span>
       <strong>${escapeHtml(moderationState)}</strong>
     </div>
   </div>`;
@@ -227,11 +250,11 @@ function updateDonationFeed(donations) {
 
   feed.innerHTML = donations.length
     ? donations.map(donationRow).join('')
-    : '<p class="empty-copy">No paid donations yet.</p>';
+    : '<p class="empty-copy">Хандив байхгүй байна.</p>';
 }
 
 function chatRow(message) {
-  const author = message.user?.name || 'Unknown user';
+  const author = message.user?.name || 'Тодорхойгүй хэрэглэгч';
   const role = message.user?.role || 'viewer';
 
   return `<article class="chat-row" data-chat-id="${escapeHtml(message.id)}">
@@ -251,7 +274,7 @@ function updateChatFeed(messages) {
 
   feed.innerHTML = messages.length
     ? messages.map(chatRow).join('')
-    : '<p class="empty-copy">Chat is quiet right now.</p>';
+    : '<p class="empty-copy">Чат одоохондоо хоосон байна.</p>';
   feed.scrollTop = feed.scrollHeight;
 }
 
@@ -291,23 +314,23 @@ async function handleCheckoutReturn(statusNode) {
   const checkoutState = params.get('checkout');
 
   if (sessionId && state.viewer) {
-    statusNode.textContent = 'Checking payment status...';
+    statusNode.textContent = 'Төлбөрийн байдал шалгаж байна...';
     const result = await requestJson(`/api/payments/status?sessionId=${encodeURIComponent(sessionId)}`);
     if (result.donation.status === 'paid') {
-      statusNode.textContent = `Payment confirmed: ${formatCurrency(result.donation.amount)} is now on the supporter wall.`;
+      statusNode.textContent = `Төлбөр баталгаажлаа: ${formatCurrency(result.donation.amount)} дэмжигчдийн жагсаалтад нэмэгдлээ.`;
     }
     window.history.replaceState({}, '', window.location.pathname);
     return;
   }
 
   if (checkoutState === 'cancelled') {
-    statusNode.textContent = 'Checkout was cancelled before payment completed.';
+    statusNode.textContent = 'Төлбөр хийгдээгүй, checkout цуцлагдлаа.';
     window.history.replaceState({}, '', window.location.pathname);
     return;
   }
 
   if (checkoutState === 'sandbox_paid') {
-    statusNode.textContent = 'Sandbox payment marked as paid.';
+    statusNode.textContent = 'Туршилтын төлбөр баталгаажлаа.';
     window.history.replaceState({}, '', window.location.pathname);
   }
 }
@@ -324,18 +347,25 @@ async function loadChannelPage() {
   const chatForm = document.querySelector('#chatForm');
   const chatStatus = document.querySelector('#chatStatus');
 
+  // Apply channel colour theme to page
+  document.body.style.setProperty('--channel-surface', payload.channel.surface || '#0d1f0a');
+
   if (player) player.innerHTML = renderChannelPlayer(payload.channel);
   if (about) about.innerHTML = renderChannelAbout(payload.channel);
   updateDonationFeed(payload.donations);
   updateChatFeed(payload.chat || []);
   startChatStream(payload.channel.id);
 
+  // Update chat online count
+  const countEl = document.querySelector('#chatOnlineCount');
+  if (countEl) countEl.textContent = formatCompact(payload.channel.viewers || 0);
+
   if (donationStatus) {
     if (state.viewer) {
-      donationStatus.textContent = `Signed in as ${state.viewer.name}. Payment mode: ${payload.providerStatus.payments.mode}.`;
+      donationStatus.textContent = `Нэвтэрсэн: ${state.viewer.name}. Төлбөрийн горим: ${payload.providerStatus.payments.mode}.`;
       await handleCheckoutReturn(donationStatus);
     } else {
-      donationStatus.textContent = 'Log in first to create a tracked donation checkout.';
+      donationStatus.textContent = 'Хандив хийхийн тулд нэвтрэнэ үү.';
     }
   }
 
@@ -349,7 +379,7 @@ async function loadChannelPage() {
       }
 
       const formData = new FormData(donationForm);
-      donationStatus.textContent = 'Creating checkout session...';
+      donationStatus.textContent = 'Checkout үүсгэж байна...';
       try {
         const result = await requestJson('/api/payments/checkout', {
           method: 'POST',
@@ -360,7 +390,7 @@ async function loadChannelPage() {
           })
         });
 
-        donationStatus.textContent = 'Redirecting to payment...';
+        donationStatus.textContent = 'Төлбөр рүү шилжиж байна...';
         window.location.href = result.checkoutUrl;
       } catch (error) {
         donationStatus.textContent = error.message;
@@ -378,7 +408,7 @@ async function loadChannelPage() {
       }
 
       const formData = new FormData(reportForm);
-      reportStatus.textContent = 'Submitting report...';
+      reportStatus.textContent = 'Мэдүүлэг илгээж байна...';
 
       try {
         await requestJson(`/api/channels/${encodeURIComponent(payload.channel.id)}/report`, {
@@ -389,7 +419,7 @@ async function loadChannelPage() {
           })
         });
 
-        reportStatus.textContent = 'Report submitted to the moderation queue.';
+        reportStatus.textContent = 'Мэдүүлэг дамжуулагдлаа.';
         reportForm.reset();
       } catch (error) {
         reportStatus.textContent = error.message;
@@ -399,8 +429,8 @@ async function loadChannelPage() {
 
   if (chatStatus) {
     chatStatus.textContent = state.viewer
-      ? `Signed in as ${state.viewer.name}. Messages appear in real time.`
-      : 'Log in to join the live chat room.';
+      ? `Нэвтэрсэн: ${state.viewer.name}. Мессежүүд бодит цагт харагдана.`
+      : 'Чатад орохын тулд нэвтрэнэ үү.';
   }
 
   if (chatForm) {
@@ -413,7 +443,7 @@ async function loadChannelPage() {
       }
 
       const formData = new FormData(chatForm);
-      chatStatus.textContent = 'Sending message...';
+      chatStatus.textContent = 'Мессеж илгээж байна...';
 
       try {
         await requestJson('/api/chat/messages', {
@@ -425,7 +455,7 @@ async function loadChannelPage() {
         });
 
         chatForm.reset();
-        chatStatus.textContent = 'Message sent.';
+        chatStatus.textContent = 'Мессеж илгээгдлээ.';
       } catch (error) {
         chatStatus.textContent = error.message;
       }
@@ -447,12 +477,16 @@ function renderStudioSummary(summary) {
   const tokenNode = document.querySelector('#tokenPanel');
 
   if (metricsNode) {
-    metricsNode.innerHTML = [
-      metricCard('Channels', String(summary.metrics.accessibleChannels)),
-      metricCard('Live now', String(summary.metrics.liveChannels)),
-      metricCard('Revenue', formatCurrency(summary.metrics.revenueTracked)),
-      metricCard('Open reports', String(summary.metrics.openReports))
-    ].join('');
+    const metNodes = {
+      metAccessible: String(summary.metrics.accessibleChannels),
+      metLive:       String(summary.metrics.liveChannels),
+      metRevenue:    formatCurrency(summary.metrics.revenueTracked),
+      metReports:    String(summary.metrics.openReports)
+    };
+    Object.entries(metNodes).forEach(([id, val]) => {
+      const el = document.querySelector(`#${id}`);
+      if (el) el.textContent = val;
+    });
   }
 
   if (channelSelect) {
@@ -520,14 +554,14 @@ async function loadStudioPage() {
     channelSelect.addEventListener('change', async () => {
       summary = await requestJson(`/api/studio/summary?channelId=${encodeURIComponent(channelSelect.value)}`);
       renderStudioSummary(summary);
-      statusNode.textContent = 'Loaded channel settings.';
+      statusNode.textContent = 'Сувгийн тохиргоо ачааллаа.';
     });
   }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
-    statusNode.textContent = 'Saving channel settings...';
+    statusNode.textContent = 'Хадгалж байна...';
 
     try {
       summary = await requestJson('/api/studio/save', {
@@ -545,7 +579,7 @@ async function loadStudioPage() {
       });
 
       renderStudioSummary(summary);
-      statusNode.textContent = 'Studio updated successfully.';
+      statusNode.textContent = 'Хадгалагдлаа.';
     } catch (error) {
       statusNode.textContent = error.message;
     }
@@ -559,16 +593,16 @@ function reportCard(report) {
       <small>${escapeHtml(report.reason)}</small>
     </div>
     <p>${escapeHtml(report.detail)}</p>
-    <small>Reporter: ${escapeHtml(report.reporterName)} · ${timeAgo(report.createdAt)}</small>
+    <small>Мэдүүлэгч: ${escapeHtml(report.reporterName)} · ${timeAgo(report.createdAt)}</small>
     <div class="action-row">
-      <button class="button button-ghost" type="button" data-report-id="${escapeHtml(report.id)}" data-decision="dismissed">Dismiss</button>
-      <button class="button" type="button" data-report-id="${escapeHtml(report.id)}" data-decision="actioned" data-offline="1">Action + Take Offline</button>
+      <button class="button button-ghost" type="button" data-report-id="${escapeHtml(report.id)}" data-decision="dismissed">Цуцлах</button>
+      <button class="button" type="button" data-report-id="${escapeHtml(report.id)}" data-decision="actioned" data-offline="1">Арга хэмжээ + Офлайн болгох</button>
     </div>
   </article>`;
 }
 
 function userCard(user) {
-  const banLabel = user.activeBan ? `Banned: ${escapeHtml(user.activeBan.reason)}` : 'No active ban';
+  const banLabel = user.activeBan ? `Хориглосон: ${escapeHtml(user.activeBan.reason)}` : 'Идэвхтэй хориглолт байхгүй';
 
   return `<article class="moderation-card">
     <div class="moderation-head">
@@ -578,7 +612,7 @@ function userCard(user) {
     <p>${escapeHtml(user.email)}</p>
     <small>${banLabel}</small>
     <div class="action-row">
-      <button class="button button-ghost" type="button" data-ban-user-id="${escapeHtml(user.id)}">Ban 7 days</button>
+      <button class="button button-ghost" type="button" data-ban-user-id="${escapeHtml(user.id)}">7 хоног хориглох</button>
     </div>
   </article>`;
 }
@@ -590,15 +624,15 @@ function channelModerationCard(channel) {
       <small>${escapeHtml(channel.moderation?.state || 'approved')}</small>
     </div>
     <p>${escapeHtml(channel.title)}</p>
-    <small>${channel.isLive ? 'Live now' : 'Offline'} · ${formatCurrency(channel.donationTotal)} paid</small>
+    <small>${channel.isLive ? 'Шууд' : 'Офлайн'} · ${formatCurrency(channel.donationTotal)} төлсөн</small>
     <div class="action-row">
-      <button class="button button-ghost" type="button" data-takedown-channel-id="${escapeHtml(channel.id)}">Restrict channel</button>
+      <button class="button button-ghost" type="button" data-takedown-channel-id="${escapeHtml(channel.id)}">Сувгийг хязгаарлах</button>
     </div>
   </article>`;
 }
 
 function recentChatCard(message) {
-  const author = message.user?.name || 'Unknown user';
+  const author = message.user?.name || 'Тодорхойгүй хэрэглэгч';
   return `<article class="moderation-card">
     <div class="moderation-head">
       <strong>${escapeHtml(author)}</strong>
@@ -607,7 +641,7 @@ function recentChatCard(message) {
     <p>${escapeHtml(message.body)}</p>
     <small>${escapeHtml(message.channelId)}</small>
     <div class="action-row">
-      <button class="button button-ghost" type="button" data-hide-chat-id="${escapeHtml(message.id)}">Hide message</button>
+      <button class="button button-ghost" type="button" data-hide-chat-id="${escapeHtml(message.id)}">Мессеж нуух</button>
     </div>
   </article>`;
 }
@@ -619,26 +653,29 @@ function renderAdminSummary(summary) {
   const recentChats = document.querySelector('#recentChats');
 
   if (metricsNode) {
-    metricsNode.innerHTML = [
-      metricCard('Open reports', String(summary.metrics.openReports)),
-      metricCard('Active bans', String(summary.metrics.activeBans)),
-      metricCard('Live channels', String(summary.metrics.liveChannels)),
-      metricCard('Paid revenue', formatCurrency(summary.metrics.paidRevenue)),
-      metricCard('Chat messages', String(summary.metrics.chatMessages))
-    ].join('');
+    const metNodes = {
+      metOpenReports:  String(summary.metrics.openReports),
+      metActiveBans:   String(summary.metrics.activeBans),
+      metLiveChannels: String(summary.metrics.liveChannels),
+      metPaidRevenue:  formatCurrency(summary.metrics.paidRevenue)
+    };
+    Object.entries(metNodes).forEach(([id, val]) => {
+      const el = document.querySelector(`#${id}`);
+      if (el) el.textContent = val;
+    });
   }
 
   if (reportQueue) {
     reportQueue.innerHTML = summary.reports.length
       ? summary.reports.map(reportCard).join('')
-      : '<p class="empty-copy">No open reports right now.</p>';
+      : '<p class="empty-copy">Одоогоор нээлттэй мэдүүлэг байхгүй байна.</p>';
   }
 
   if (userModeration) {
     userModeration.innerHTML = `
-      <h3>Users</h3>
+      <h3>Хэрэглэгчид</h3>
       <div class="report-queue">${summary.users.map(userCard).join('')}</div>
-      <h3>Channels</h3>
+      <h3>Сувгууд</h3>
       <div class="report-queue">${summary.channels.map(channelModerationCard).join('')}</div>
     `;
   }
@@ -646,7 +683,7 @@ function renderAdminSummary(summary) {
   if (recentChats) {
     recentChats.innerHTML = summary.recentChats.length
       ? summary.recentChats.map(recentChatCard).join('')
-      : '<p class="empty-copy">No recent chat messages.</p>';
+      : '<p class="empty-copy">Сүүлийн үеийн чат мессеж байхгүй байна.</p>';
   }
 }
 
@@ -665,7 +702,7 @@ async function loadAdminPage() {
         return;
       }
 
-      const actionNotes = window.prompt('Add moderation notes', 'Reviewed in admin console') || '';
+      const actionNotes = window.prompt('Модерацийн тэмдэглэл нэмэх', 'Админ консолоос шалгасан') || '';
       const nextSummary = await requestJson(`/api/admin/reports/${button.dataset.reportId}/resolve`, {
         method: 'POST',
         body: JSON.stringify({
@@ -683,7 +720,7 @@ async function loadAdminPage() {
     userModeration.addEventListener('click', async (event) => {
       const banButton = event.target.closest('[data-ban-user-id]');
       if (banButton) {
-        const reason = window.prompt('Ban reason', 'Policy violation') || 'Policy violation';
+        const reason = window.prompt('Хориглох шалтгаан', 'Дүрэм зөрчсөн') || 'Дүрэм зөрчсөн';
         const nextSummary = await requestJson(`/api/admin/users/${banButton.dataset.banUserId}/ban`, {
           method: 'POST',
           body: JSON.stringify({ reason, days: 7 })
@@ -729,7 +766,7 @@ async function loadAuthPage() {
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(loginForm);
-      loginStatus.textContent = 'Signing in...';
+      loginStatus.textContent = 'Нэвтэрч байна...';
 
       try {
         await requestJson('/api/auth/login', {
@@ -752,7 +789,7 @@ async function loadAuthPage() {
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(registerForm);
-      registerStatus.textContent = 'Creating account...';
+      registerStatus.textContent = 'Бүртгэл үүсгэж байна...';
 
       try {
         await requestJson('/api/auth/register', {
@@ -804,7 +841,7 @@ async function loadSandboxCheckoutPage() {
     </label>`;
 
   confirmButton.addEventListener('click', async () => {
-    statusNode.textContent = 'Confirming sandbox payment...';
+    statusNode.textContent = 'Туршилтын төлбөр баталгаажуулж байна...';
     try {
       await requestJson('/api/payments/sandbox/confirm', {
         method: 'POST',
@@ -820,10 +857,17 @@ async function loadSandboxCheckoutPage() {
 
 async function boot() {
   bindLogout();
+  bindTopbarSearch();
+  loadSidebarChannels().catch(() => {});
+
   const page = document.body.dataset.page;
 
   if (page === 'home') {
     await loadHomePage();
+  }
+
+  if (page === 'browse') {
+    await loadBrowsePage();
   }
 
   if (page === 'auth') {
@@ -847,6 +891,130 @@ async function boot() {
   }
 }
 
+// ── Sidebar – live channel list ─────────────────────────────
+async function loadSidebarChannels() {
+  const container = document.querySelector('#sidebarLiveChannels');
+  if (!container) return;
+
+  const payload = await requestJson('/api/channels');
+  const channels = payload.channels || [];
+
+  if (!channels.length) return;
+
+  container.innerHTML = channels.map((ch) => {
+    const initial = (ch.initials || ch.name?.[0] || 'N').charAt(0).toUpperCase();
+    const accent  = escapeHtml(ch.accent || 'var(--green)');
+    const isLive  = ch.isLive;
+    const viewers = isLive ? formatCompact(ch.viewers) : '—';
+
+    return `<a class="sidebar-channel" href="/channel/${encodeURIComponent(ch.slug)}">
+      <div class="sidebar-avatar">
+        <div class="sidebar-avatar-char" style="background:${accent}22;color:${accent}">${initial}</div>
+        ${isLive ? '<div class="live-dot"></div>' : ''}
+      </div>
+      <div class="sidebar-channel-info">
+        <strong>${escapeHtml(ch.name)}</strong>
+        <small>${escapeHtml(ch.category)} · ${viewers}</small>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+// ── Browse page ─────────────────────────────────────────────
+async function loadBrowsePage() {
+  const grid = document.querySelector('#browseGrid');
+  if (!grid) return;
+
+  const payload = await requestJson('/api/channels');
+  const allChannels = payload.channels || [];
+
+  // Check if a category pre-filter was in the URL (e.g. /browse?category=Gaming)
+  const params = new URLSearchParams(window.location.search);
+  const preCategory = params.get('category') || '';
+
+  function renderBrowseGrid(cat) {
+    const filtered = cat
+      ? allChannels.filter((c) => c.category === cat)
+      : allChannels;
+    grid.innerHTML = filtered.length
+      ? filtered.map(channelCard).join('')
+      : `<p class="form-note" style="padding:20px">Энэ ангилалд суваг байхгүй байна.</p>`;
+  }
+
+  renderBrowseGrid(preCategory);
+
+  // Highlight matching cat-card if pre-filtered
+  if (preCategory) {
+    document.querySelectorAll('.cat-card').forEach((card) => {
+      const name = card.querySelector('.cat-card-name')?.textContent;
+      if (name === preCategory) card.style.borderColor = 'var(--cat-color, var(--green))';
+    });
+    // Scroll to channels section
+    document.querySelector('#browseChannels')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Cat-card clicks filter instead of navigating (prevent reload)
+  document.querySelectorAll('.cat-card').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = card.getAttribute('href') || '';
+      const cat = new URL(href, window.location.origin).searchParams.get('category') || '';
+      renderBrowseGrid(cat);
+      document.querySelector('#browseChannels')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Update section title
+      const titleEl = document.querySelector('#browseChannels .section-title');
+      if (titleEl) titleEl.textContent = cat ? `🔴 ${cat} сувгууд` : '🔴 Бүх шууд сувгууд';
+    });
+  });
+}
+
+// ── Home category filter ─────────────────────────────────────
+function bindCategoryFilter(allChannels) {
+  const row = document.querySelector('#catFilterRow');
+  if (!row) return;
+
+  row.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cat-filter-btn');
+    if (!btn) return;
+
+    row.querySelectorAll('.cat-filter-btn').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+
+    const cat = btn.dataset.cat;
+    const grid = document.querySelector('#featuredGrid');
+    if (!grid) return;
+
+    const filtered = cat ? allChannels.filter((c) => c.category === cat) : allChannels;
+    grid.innerHTML = filtered.length
+      ? filtered.map(channelCard).join('')
+      : `<p class="form-note" style="padding:20px">Энэ ангилалд суваг байхгүй байна.</p>`;
+  });
+}
+
+// ── Topbar search – filter channel grid on home ─────────────
+function bindTopbarSearch() {
+  const input = document.querySelector('#topbarSearch');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    const cards = document.querySelectorAll('#featuredGrid .channel-card');
+    cards.forEach((card) => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+  });
+
+  // Focus on Ctrl+K / Cmd+K
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   boot().catch((error) => {
     const statusNode =
@@ -857,7 +1025,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelector('#checkoutStatus');
 
     if (statusNode) {
-      statusNode.textContent = error.message;
+      statusNode.textContent = `Алдаа: ${error.message}`;
     }
+
+    console.error('[NEXA boot error]', error);
   });
 });

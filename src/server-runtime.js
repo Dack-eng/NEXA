@@ -23,6 +23,7 @@ const {
 } = require('./providers');
 const {
   renderHomePage,
+  renderBrowsePage,
   renderAuthPage,
   renderChannelPage,
   renderStudioPage,
@@ -176,9 +177,9 @@ function ensureCreatorChannel(store, user) {
     name: `${user.name} Live`,
     handle: `@${uniqueSlug}`,
     ownerUserId: user.id,
-    title: 'New creator stream setup',
+    title: 'Шинэ бүтээгчийн stream тохируулга',
     category: 'Just Chatting',
-    description: 'New creator channel ready for your first NEXA production stream.',
+    description: 'Шинэ бүтээгчийн суваг — таны анхны NEXA стримд бэлэн байна.',
     accent: '#3ce0d1',
     surface: '#14203a',
     isLive: false,
@@ -968,6 +969,12 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/' && req.method === 'GET') {
       const store = await readStore();
       sendHtml(res, 200, renderHomePage({ viewer: getCurrentViewer(store, req), providerStatus: getProviderStatus() }));
+      return;
+    }
+
+    if (pathname === '/browse' && req.method === 'GET') {
+      const store = await readStore();
+      sendHtml(res, 200, renderBrowsePage({ viewer: getCurrentViewer(store, req) }));
       return;
     }
 
