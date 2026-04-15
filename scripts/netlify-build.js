@@ -5,7 +5,16 @@ function run(cmd) {
   execSync(cmd, { stdio: 'inherit' });
 }
 
-// Prisma client үргэлж үүсгэнэ (database холболтгүйгээр ажилладаг)
+// prisma generate нь бодит database холболт шаардахгүй ч
+// schema-д env() байвал Prisma шалгадаг тул placeholder тавина
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'postgresql://placeholder:placeholder@localhost:5432/nexa';
+}
+if (!process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
+
+// Prisma client үүсгэнэ
 run('prisma generate');
 
 // DATABASE_URL болон DATABASE_PROVIDER=prisma тохируулсан үед л db push + seed хийнэ
