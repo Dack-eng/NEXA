@@ -389,20 +389,33 @@ function buildDefaultStore() {
   };
 }
 
-// Netlify дээр filesystem нь read-only тул /tmp ашиглана
+// Serverless орчин шалгана (Netlify, AWS Lambda, гэх мэт)
+function isServerless() {
+  return !!(
+    process.env.NETLIFY ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+}
+
+// Serverless дээр /tmp ашиглана (зөвхөн /tmp бичигдэх боломжтой)
 function getWritableStorePath() {
-  if (process.env.NETLIFY) {
+  if (isServerless()) {
     return '/tmp/nexa-store.json';
   }
   return config.storePath;
 }
 
 function ensureDataDir() {
-  if (process.env.NETLIFY) {
-    return; // Netlify дээр data dir үүсгэх шаардлагагүй
+  if (isServerless()) {
+    return; // Serverless дээр /var/task read-only тул алгасна
   }
-  if (!fs.existsSync(config.dataDir)) {
-    fs.mkdirSync(config.dataDir, { recursive: true });
+  try {
+    if (!fs.existsSync(config.dataDir)) {
+      fs.mkdirSync(config.dataDir, { recursive: true });
+    }
+  } catch (_) {
+    // Read-only filesystem бол алгасна
   }
 }
 
@@ -541,8 +554,15 @@ async function ensureStore() {
   ensureDataDir();
 
   const writablePath = getWritableStorePath();
-  if (!fs.existsSync(writablePath) && !fs.existsSync(config.storePath)) {
-    fs.writeFileSync(writablePath, JSON.stringify(buildDefaultStore(), null, 2));
+  const hasWritable = fs.existsSync(writablePath);
+  const hasBundled = fs.existsSync(config.storePath);
+
+  if (!hasWritable && !hasBundled) {
+    try {
+      fs.writeFileSync(writablePath, JSON.stringify(buildDefaultStore(), null, 2));
+    } catch (_) {
+      // Бичиж чадахгүй бол default store санах ойд байна
+    }
   }
 }
 
@@ -613,7 +633,7 @@ async function readStore() {
     return readPrismaStore();
   }
 
-  // Netlify дээр /tmp-г эхлээд уншина, дараа нь bundled файлыг
+  // Serverless дээр /tmp-г эхлээд уншина, дараа нь bundled файлыг
   const writablePath = getWritableStorePath();
   const readPath = fs.existsSync(writablePath) ? writablePath : config.storePath;
 
@@ -623,13 +643,14 @@ async function readStore() {
     const normalized = normalizeStore(parsed);
 
     if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
-      fs.writeFileSync(writablePath, JSON.stringify(normalized, null, 2));
+      try { fs.writeFileSync(writablePath, JSON.stringify(normalized, null, 2)); } catch (_) {}
     }
 
     return normalized;
-  } catch (error) {
+  } catch (_) {
+    // Файл байхгүй эсвэл уншиж чадахгүй — default store ашиглана
     const seeded = buildDefaultStore();
-    fs.writeFileSync(writablePath, JSON.stringify(seeded, null, 2));
+    try { fs.writeFileSync(writablePath, JSON.stringify(seeded, null, 2)); } catch (_2) {}
     return seeded;
   }
 }
