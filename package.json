@@ -14,7 +14,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
     "db:setup": "prisma db push && node prisma/seed.js",
-    "netlify:build": "prisma generate && prisma db push --skip-generate && node prisma/seed.js"
+    "netlify:build": "node scripts/netlify-build.js"
   },
   "dependencies": {
     "@prisma/client": "^7.6.0",
