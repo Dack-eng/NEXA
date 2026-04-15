@@ -1,0 +1,17 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  command = "npm run netlify:build"
+
+# Static файлуудыг Netlify CDN-ээр шууд хурдан дамжуулна
+[[redirects]]
+  from = "/static/*"
+  to = "/:splat"
+  status = 200
+  force = true
+
+# Бусад бүх хүсэлтийг serverless function руу дамжуулна
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api"
+  status = 200

@@ -404,7 +404,7 @@ function getCurrentViewer(store, req) {
   return sanitizeUser(user);
 }
 
-const server = http.createServer(async (req, res) => {
+async function requestHandler(req, res) {
   const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = requestUrl.pathname;
 
@@ -1034,14 +1034,20 @@ const server = http.createServer(async (req, res) => {
       detail: error.message
     });
   }
-});
+}
 
-server.listen(config.port, () => {
-  ensureStore()
-    .then(() => {
-      console.log(`NEXA running at http://localhost:${config.port}`);
-    })
-    .catch((error) => {
-      console.error('Failed to initialize NEXA store:', error.message);
-    });
-});
+const server = http.createServer(requestHandler);
+
+module.exports = requestHandler;
+
+if (!process.env.NETLIFY) {
+  server.listen(config.port, () => {
+    ensureStore()
+      .then(() => {
+        console.log(`NEXA running at http://localhost:${config.port}`);
+      })
+      .catch((error) => {
+        console.error('Failed to initialize NEXA store:', error.message);
+      });
+  });
+}

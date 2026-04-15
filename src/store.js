@@ -389,7 +389,18 @@ function buildDefaultStore() {
   };
 }
 
+// Netlify дээр filesystem нь read-only тул /tmp ашиглана
+function getWritableStorePath() {
+  if (process.env.NETLIFY) {
+    return '/tmp/nexa-store.json';
+  }
+  return config.storePath;
+}
+
 function ensureDataDir() {
+  if (process.env.NETLIFY) {
+    return; // Netlify дээр data dir үүсгэх шаардлагагүй
+  }
   if (!fs.existsSync(config.dataDir)) {
     fs.mkdirSync(config.dataDir, { recursive: true });
   }
@@ -529,8 +540,9 @@ async function ensureStore() {
 
   ensureDataDir();
 
-  if (!fs.existsSync(config.storePath)) {
-    fs.writeFileSync(config.storePath, JSON.stringify(buildDefaultStore(), null, 2));
+  const writablePath = getWritableStorePath();
+  if (!fs.existsSync(writablePath) && !fs.existsSync(config.storePath)) {
+    fs.writeFileSync(writablePath, JSON.stringify(buildDefaultStore(), null, 2));
   }
 }
 
@@ -601,19 +613,23 @@ async function readStore() {
     return readPrismaStore();
   }
 
+  // Netlify дээр /tmp-г эхлээд уншина, дараа нь bundled файлыг
+  const writablePath = getWritableStorePath();
+  const readPath = fs.existsSync(writablePath) ? writablePath : config.storePath;
+
   try {
-    const raw = fs.readFileSync(config.storePath, 'utf8');
+    const raw = fs.readFileSync(readPath, 'utf8');
     const parsed = JSON.parse(raw);
     const normalized = normalizeStore(parsed);
 
     if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
-      fs.writeFileSync(config.storePath, JSON.stringify(normalized, null, 2));
+      fs.writeFileSync(writablePath, JSON.stringify(normalized, null, 2));
     }
 
     return normalized;
   } catch (error) {
     const seeded = buildDefaultStore();
-    fs.writeFileSync(config.storePath, JSON.stringify(seeded, null, 2));
+    fs.writeFileSync(writablePath, JSON.stringify(seeded, null, 2));
     return seeded;
   }
 }
@@ -722,7 +738,7 @@ async function writeStore(store) {
     return;
   }
 
-  fs.writeFileSync(config.storePath, JSON.stringify(store, null, 2));
+  fs.writeFileSync(getWritableStorePath(), JSON.stringify(store, null, 2));
 }
 
 async function mutateStore(mutator) {
