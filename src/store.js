@@ -523,7 +523,8 @@ function getPrismaClient() {
     const { PrismaClient } = require('@prisma/client');
     const { PrismaPg } = require('@prisma/adapter-pg');
     const { Pool } = require('pg');
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const dbUrl = (process.env.DATABASE_URL || '').replace('?pgbouncer=true', '');
+    const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
     const adapter = new PrismaPg(pool);
     prismaSingleton = new PrismaClient({ adapter });
   }
