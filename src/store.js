@@ -521,7 +521,11 @@ function getPrismaClient() {
 
   if (!prismaSingleton) {
     const { PrismaClient } = require('@prisma/client');
-    prismaSingleton = new PrismaClient();
+    const { PrismaPg } = require('@prisma/adapter-pg');
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const adapter = new PrismaPg(pool);
+    prismaSingleton = new PrismaClient({ adapter });
   }
 
   return prismaSingleton;

@@ -24,7 +24,7 @@ const hasDb =
 
 if (hasDb) {
   console.log('DATABASE_URL олдлоо — schema push болон seed хийж байна...');
-  run('prisma db push --skip-generate');
+  run('prisma db push');
   run('node prisma/seed.js');
   console.log('Database амжилттай тохируулагдлаа.');
 } else {
