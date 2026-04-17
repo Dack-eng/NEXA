@@ -546,13 +546,6 @@ function toDate(value) {
 
 async function ensureStore() {
   if (isPrismaMode()) {
-    const prisma = getPrismaClient();
-    const userCount = await prisma.user.count();
-
-    if (userCount === 0) {
-      await persistPrismaStore(buildDefaultStore());
-    }
-
     return;
   }
 
