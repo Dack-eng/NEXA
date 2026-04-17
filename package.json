@@ -17,7 +17,10 @@
     "netlify:build": "node scripts/netlify-build.js"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0",
     "prisma": "^7.6.0",
     "serverless-http": "^3.2.0"
   }
