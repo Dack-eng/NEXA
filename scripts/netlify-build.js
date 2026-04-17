@@ -23,10 +23,7 @@ const hasDb =
   process.env.DATABASE_PROVIDER === 'prisma';
 
 if (hasDb) {
-  console.log('DATABASE_URL олдлоо — schema push болон seed хийж байна...');
-  run('prisma db push');
-  run('node prisma/seed.js');
-  console.log('Database амжилттай тохируулагдлаа.');
+  console.log('DATABASE_URL олдлоо — Prisma client бэлэн.');
 } else {
-  console.log('DATABASE_URL тохируулагдаагүй — db push алгасав. JSON store ашиглана.');
+  console.log('DATABASE_URL тохируулагдаагүй — JSON store ашиглана.');
 }
