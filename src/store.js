@@ -525,6 +525,7 @@ function getPrismaClient() {
     const { Pool } = require('pg');
     const dbUrl = (process.env.DATABASE_URL || '').replace('?pgbouncer=true', '');
     const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    process.on('exit', () => pool.end());
     const adapter = new PrismaPg(pool);
     prismaSingleton = new PrismaClient({ adapter });
   }
